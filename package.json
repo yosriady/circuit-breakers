@@ -1,0 +1,16 @@
+{
+  "name": "circuit-breakers",
+  "version": "1.0.0",
+  "description": "Fault tolerant smart contracts with Circuit Breakers in Solidity.",
+  "author": "Yos Riady <yosriady@gmail.com>",
+  "scripts": {
+    "lint": "solhint contracts/**/*.sol",
+    "test": "truffle test",
+    "coverage": "truffle run coverage"
+  },
+  "devDependencies": {
+    "@openzeppelin/test-helpers": "^0.5.6",
+    "solhint": "^3.0.0",
+    "solidity-coverage": "^0.7.9"
+  }
+}
