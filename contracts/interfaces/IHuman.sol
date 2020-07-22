@@ -2,5 +2,5 @@
 pragma solidity ^0.6.11;
 
 interface IHuman {
-  function speak() external view returns (uint);
+  function speak() external view returns (string memory);
 }

@@ -16,7 +16,7 @@ contract Resilient {
     secondary = _secondary;
   }
 
-  function ask() external view returns (uint) {
+  function ask() external view returns (string memory) {
     // TODO: use circuit breaker
     return primary.speak();
   }
