@@ -48,8 +48,6 @@ contract('Resilient', (accounts) => {
     expect(greeting).to.equal(SECONDARY_RESPONSE);
   });
 
-  // todo: safeAsk tests
-
   it('safeAsk increments failure count when moody', async () => {
     await this.moody.toggleMood()
     const isMoody = await this.moody.isMoody();
@@ -72,6 +70,7 @@ contract('Resilient', (accounts) => {
     await this.resilient.safeAsk();
     const receipt = await this.resilient.safeAsk();
     expectEvent(receipt, 'Opened');
+    expectEvent(receipt, 'Log', { msg: SECONDARY_RESPONSE });
 
     const breaker = await this.resilient.breaker();
     expect(breaker.status.toNumber()).to.equal(OPEN);
@@ -93,14 +92,16 @@ contract('Resilient', (accounts) => {
 
     const receipt = await this.resilient.safeAsk(); // Retry after moody recovers
     expectEvent(receipt, 'Closed');
+    expectEvent(receipt, 'Log', { msg: PRIMARY_RESPONSE });
     breaker = await this.resilient.breaker();
     expect(breaker.status.toNumber()).to.equal(CLOSED);
     expect(breaker.failureCount.toNumber()).to.equal(0); // Failure count reset 
 
     await this.resilient.safeAsk();
-    await this.resilient.safeAsk();
+    const receipt2 = await this.resilient.safeAsk(); // Call safeAsk() TRESHOLD times
+    expectEvent(receipt2, 'Log', { msg: PRIMARY_RESPONSE }); // Still closed since Moody recovered
     breaker = await this.resilient.breaker();
-    expect(breaker.status.toNumber()).to.equal(CLOSED); // Still closed since Moody recovered
+    expect(breaker.status.toNumber()).to.equal(CLOSED); // Still closed
     expect(breaker.failureCount.toNumber()).to.equal(0);
   });
 })

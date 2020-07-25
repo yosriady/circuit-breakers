@@ -15,7 +15,7 @@ library CircuitBreaker {
     uint retryAt; // Unix timestamp when breaker is half-opened (in seconds)
   }
 
-  function build(uint8 _failureTreshold, uint256 _cooldown) internal pure returns (Breaker memory) {
+  function build(uint8 _failureTreshold, uint _cooldown) internal pure returns (Breaker memory) {
     require(_failureTreshold > 0, 'Breaker failure treshold must be greater than zero.');
     require(_cooldown > 0, 'Breaker cooldown must be greater than zero.');
     return Breaker(

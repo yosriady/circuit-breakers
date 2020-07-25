@@ -17,6 +17,8 @@ contract Resilient is ReentrancyGuard {
   IHuman public secondary;
   CircuitBreaker.Breaker public breaker;
 
+  event Log(string msg); // Event used for testing safeAsk's non-view return value
+
   constructor(
     IHuman _primary,
     IHuman _secondary,
@@ -29,16 +31,23 @@ contract Resilient is ReentrancyGuard {
   }
 
   function safeAsk() external nonReentrant returns (string memory) {
-    if (breaker.isOpen()) return secondary.speak(); 
+    if (breaker.isOpen()) {
+      string memory greeting = secondary.speak();
+      Log(greeting);
+      return greeting;
+    }
 
     // When breaker is half opened or closed, try primary 
     try primary.speak() returns (string memory greeting) 
     {
       breaker.success(); // Notify breaker of success
+      Log(greeting);
       return greeting;
     } catch {
       breaker.fail(); // Notify breaker of failure
-      return secondary.speak();
+      string memory greeting = secondary.speak();
+      Log(greeting);
+      return greeting;
     }
   }
 
