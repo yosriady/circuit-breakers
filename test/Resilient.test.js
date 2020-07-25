@@ -1,9 +1,15 @@
-const { expectRevert } = require('@openzeppelin/test-helpers');
+const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const Resilient = artifacts.require("Resilient");
 const Moody = artifacts.require("Moody");
 const Stoic = artifacts.require("Stoic");
 
-contract('Moody', (accounts) => {
+const CLOSED = 0;
+const OPEN = 1;
+
+const TRESHOLD = 2;
+const COOLDOWN = time.duration.minutes(5);
+
+contract('Resilient', (accounts) => {
   const [ owner ] = accounts;
 
   beforeEach(async () => {
@@ -11,11 +17,18 @@ contract('Moody', (accounts) => {
     this.stoic = await Stoic.new("Sup.");
     this.resilient = await Resilient.new(
       this.moody.address,
-      this.stoic.address
+      this.stoic.address,
+      TRESHOLD,
+      COOLDOWN
     )
   });
 
-  it('asks returns when not moody', async () => {
+  it('initializes circuit breaker', async () => {
+    const breaker = await this.resilient.breaker();
+    expect(breaker.status.toNumber()).to.equal(CLOSED);
+  });    
+
+  it('ask returns when not moody', async () => {
     const greeting = await this.resilient.ask();
 
     expect(greeting).to.equal("Huzzah!");
