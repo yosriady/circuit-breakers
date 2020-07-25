@@ -4,8 +4,8 @@ pragma solidity ^0.6.12;
 
 library CircuitBreaker {
   enum Status { CLOSED, OPEN }
-  event Closed();
   event Opened(uint retryAt);
+  event Closed();
 
   struct Breaker {
     Status status; // OPEN or CLOSED
