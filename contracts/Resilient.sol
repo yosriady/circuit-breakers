@@ -2,9 +2,10 @@
 pragma solidity ^0.6.12;
 
 import "./interfaces/IHuman.sol";
+import "./utils/ReentrancyGuard.sol";
 import "./CircuitBreaker.sol";
 
-contract Resilient {
+contract Resilient is ReentrancyGuard {
   using CircuitBreaker for CircuitBreaker.Breaker;
   
   IHuman public primary;
@@ -23,16 +24,22 @@ contract Resilient {
   }
 
   function ask() external view returns (string memory) {
-    // TODO: call secondary if breaker opened
-    // return secondary.speak();
+    if (breaker.isOpen()) return secondary.speak();
+    return primary.speak();
+  }
+
+  function tryAsk() external nonReentrant returns (string memory) {
+    // if breaker opened, call secondary
+    if (breaker.isOpen()) return secondary.speak();
 
     // else if breaker is half opened or opened, try primary 
     try primary.speak() returns (string memory greeting) 
     {
+      breaker.success(); // Notify breaker of success
       return greeting;
     } catch {
-      // TODO: use circuit breaker
-      // breakerFailures++;
+      breaker.fail(); // Notify breaker of failure
+      return secondary.speak(); // Use backup
     }
   }
 }

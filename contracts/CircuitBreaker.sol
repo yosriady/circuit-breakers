@@ -5,12 +5,12 @@ pragma solidity ^0.6.12;
 library CircuitBreaker {
   enum Status { CLOSED, OPEN }
   event Closed();
-  event Opened();
+  event Opened(uint retryAt);
 
   struct Breaker {
     Status status; // OPEN or CLOSED
     uint8 failureCount; // Counter for number of failed calls
-    uint8 failureTreshold; // When failures >= treshold, trip the breaker
+    uint8 failureTreshold; // When failure count >= treshold, trip / open the breaker
     uint cooldown; // How long after a trip before the breaker is half-opened (in seconds)
     uint retryAt; // Unix timestamp when breaker is half-opened (in seconds)
   }
@@ -29,58 +29,46 @@ library CircuitBreaker {
 
   // Track success
   function success(Breaker storage self) internal {
-    // TODO: only call this after a isHalfOpen() check and actual successful call
-    if (canRestore(self)) _restore(self);
+    if (_canReset(self)) _reset(self);
   }
 
-  // Track failure
-  function fail(Breaker storage self) internal {
-    self.failureCount++;
-    if (canTrip(self)) _trip(self);
+  // Returns true if breaker can be reset
+  function _canReset(Breaker storage self) private view returns (bool) {
+    return isHalfOpen(self);
   }
 
-  // Returns true if breaker can be tripped
-  function canTrip(Breaker storage self) internal view returns (bool) {
-    return (isClosed(self) && self.failureCount >= self.failureTreshold);
-  }
-
-  function _trip(Breaker storage self) private {
-    self.status = Status.OPEN;
-    self.retryAt = now + self.cooldown;
-    emit Opened();
-  }
-
-  // Returns true if breaker can be restored
-  function canRestore(Breaker storage self) private view returns (bool) {
-    return (isOpen(self) && now >= self.retryAt);
-  }
-
-  function _restore(Breaker storage self) private {
+  function _reset(Breaker storage self) private {
     self.status = Status.CLOSED;
     self.failureCount = 0;
     emit Closed();
   }
 
-  function isOpen(Breaker storage self) internal view returns (bool) {
-    return self.status == Status.OPEN;
+  // Track failure
+  function fail(Breaker storage self) internal {
+    self.failureCount++;
+    if (_canTrip(self)) _trip(self);
+  }
+
+  // Returns true if breaker can be tripped
+  function _canTrip(Breaker storage self) private view returns (bool) {
+    return (isClosed(self) && self.failureCount >= self.failureTreshold) || isHalfOpen(self);
+  }
+
+  function _trip(Breaker storage self) private {
+    self.status = Status.OPEN;
+    self.retryAt = now + self.cooldown;
+    emit Opened(self.retryAt);
   }
 
   function isClosed(Breaker storage self) internal view returns (bool) {
     return self.status == Status.CLOSED;
   }
 
-  // Returns true if cooldown met
-  function isHalfOpen(Breaker storage self) internal view returns (bool) {
-    return (isClosed(self) && self.retryAt >= now);
+  function isOpen(Breaker storage self) internal view returns (bool) {
+    return self.status == Status.OPEN && now < self.retryAt; // Waiting for retry cooldown
   }
 
-  // modifier whenOpen() {
-  //     require(isOpen(), "CircuitBreaker: self is not OPEN");
-  //     _;
-  // }
-
-  // modifier whenClosed() {
-  //     require(isClosed(), "CircuitBreaker: self is not CLOSED");
-  //     _;
-  // }
+  function isHalfOpen(Breaker storage self) internal view returns (bool) {
+    return self.status == Status.OPEN && now >= self.retryAt; // Has passed retry cooldown
+  }
 }

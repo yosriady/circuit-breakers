@@ -7,7 +7,7 @@ const CLOSED = 0;
 const OPEN = 1;
 
 const TRESHOLD = 2;
-const COOLDOWN = time.duration.minutes(5);
+const COOLDOWN = time.duration.minutes(5); // 300
 
 contract('Resilient', (accounts) => {
   const [ owner ] = accounts;
@@ -26,11 +26,14 @@ contract('Resilient', (accounts) => {
   it('initializes circuit breaker', async () => {
     const breaker = await this.resilient.breaker();
     expect(breaker.status.toNumber()).to.equal(CLOSED);
+    expect(breaker.failureCount.toNumber()).to.equal(0);
+    expect(breaker.failureTreshold.toNumber()).to.equal(TRESHOLD);
+    expect(breaker.cooldown.toNumber()).to.equal(COOLDOWN.toNumber());
+    expect(breaker.retryAt.toNumber()).to.equal(0);
   });    
 
   it('ask returns when not moody', async () => {
     const greeting = await this.resilient.ask();
-
     expect(greeting).to.equal("Huzzah!");
   });
 })
